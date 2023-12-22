@@ -1,3 +1,5 @@
+// components/Phonebook.jsx
+
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
@@ -5,15 +7,19 @@ import {
   addContact,
   deleteContact,
   setFilter,
+  setLoading,
+  setError,
 } from '../../redux/contactsSlice';
 import { nanoid } from 'nanoid';
 import ContactForm from './ContactForm';
 import ContactList from './ContactList';
+import { addContactApi } from 'service/api';
 import './Phonebook.module.css';
 
 const Phonebook = () => {
-  const contacts = useSelector(state => state.contacts.list);
+  const contacts = useSelector(state => state.contacts.items);
   const filter = useSelector(state => state.contacts.filter);
+  const error = useSelector(state => state.contacts.error);
   const dispatch = useDispatch();
 
   const [name, setName] = React.useState('');
@@ -34,46 +40,66 @@ const Phonebook = () => {
     }
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
 
-    const nameExists = contacts.some(
-      contact => contact.name.toLowerCase() === name.toLowerCase()
-    );
-    const numberExists = contacts.some(contact => contact.number === number);
+    dispatch(setLoading(true));
 
-    if (nameExists) {
-      alert(
-        'The contact with this name already exists in the phonebook. Please choose a different name.'
-      );
-      return;
+    try {
+      console.log('Before fetching contacts...');
+      const newContact = await addContactApi({ name, number });
+
+      console.log('After fetching contacts:', contacts);
+
+      dispatch(addContact(newContact));
+      dispatch(setLoading(false));
+      dispatch(setError(null));
+
+      setName('');
+      setNumber('');
+      dispatch(setFilter(''));
+    } catch (error) {
+      dispatch(setError('Failed to add contact'));
+      dispatch(setLoading(false));
     }
-
-    if (numberExists) {
-      alert(
-        'This phone number already exists in the phone book. Please choose a different phone number.'
-      );
-      return;
-    }
-
-    if (name.trim() === '' || number.trim() === '') {
-      alert('Please fill in all fields to add a contact.');
-      return;
-    }
-
-    const newContact = {
-      id: nanoid(),
-      name,
-      number,
-    };
-
-    dispatch(addContact(newContact));
-    setName('');
-    setNumber('');
-    dispatch(setFilter(''));
-
-    dispatch(setContacts([...contacts, newContact]));
   };
+
+  const nameExists = contacts.some(
+    contact => contact.name.toLowerCase() === name.toLowerCase()
+  );
+  const numberExists = contacts.some(contact => contact.number === number);
+
+  if (nameExists) {
+    alert(
+      'The contact with this name already exists in the phonebook. Please choose a different name.'
+    );
+    return null;
+  }
+
+  if (numberExists) {
+    alert(
+      'This phone number already exists in the phone book. Please choose a different phone number.'
+    );
+    return null;
+  }
+
+  if (name.trim() === '' || number.trim() === '') {
+    alert('Please fill in all fields to add a contact.');
+    return null;
+  }
+
+  const newContact = {
+    id: nanoid(),
+    name,
+    number,
+  };
+
+  dispatch(addContact(newContact));
+  setName('');
+  setNumber('');
+  dispatch(setFilter(''));
+
+  dispatch(setContacts([...contacts, newContact]));
 
   const handleFilterChange = e => {
     dispatch(setFilter(e.target.value));
@@ -92,6 +118,9 @@ const Phonebook = () => {
   return (
     <div>
       <h1>Phonebook</h1>
+
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+
       <ContactForm
         name={name}
         number={number}
