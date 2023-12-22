@@ -1,31 +1,43 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { addContactApi, fetchContactsApi, deleteContactApi } from 'service/api';
+import * as api from '../service/api';
 
-// Operația asincronă pentru obținerea contactelor
-export const fetchContacts = createAsyncThunk('contacts/fetchAll', async () => {
-  const response = await fetchContactsApi();
-  return response;
-});
+export const fetchAllContacts = createAsyncThunk(
+  'contacts/fetchAllContacts',
+  async (_, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await api.fetchContacts();
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
 
-// Operația asincronă pentru adăugarea unui contact
 export const addContact = createAsyncThunk(
   'contacts/addContact',
-  async contactData => {
-    const response = await addContactApi(contactData);
-    return response;
+  async (contact, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await api.addContact(contact);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
   }
 );
 
-// Operația asincronă pentru ștergerea unui contact
 export const deleteContact = createAsyncThunk(
   'contacts/deleteContact',
-  async contactId => {
-    await deleteContactApi(contactId);
-    return contactId;
+  async (contactId, { dispatch, rejectWithValue }) => {
+    try {
+      await api.deleteContact(contactId);
+      return contactId;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
   }
 );
 
-export const contactsSlice = createSlice({
+const contactsSlice = createSlice({
   name: 'contacts',
   initialState: { items: [], isLoading: false, error: null, filter: '' },
   reducers: {
@@ -41,69 +53,52 @@ export const contactsSlice = createSlice({
     setError: (state, action) => {
       state.error = action.payload;
     },
-  },
-  extraReducers: builder => {
-    // Reducer pentru succesul operației fetchContacts
-    builder.addCase(fetchContacts.fulfilled, (state, action) => {
-      state.items = action.payload;
-      state.isLoading = false;
-      state.error = null;
-    });
+    extraReducers: builder => {
+      builder.addCase(fetchAllContacts.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      });
+      builder.addCase(fetchAllContacts.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.items = action.payload;
+      });
+      builder.addCase(fetchAllContacts.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
 
-    // Reducer pentru începutul operației fetchContacts
-    builder.addCase(fetchContacts.pending, state => {
-      state.isLoading = true;
-      state.error = null;
-    });
+      builder.addCase(addContact.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      });
+      builder.addCase(addContact.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.items.push(action.payload);
+      });
+      builder.addCase(addContact.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
 
-    // Reducer pentru eroare în operația fetchContacts
-    builder.addCase(fetchContacts.rejected, (state, action) => {
-      state.isLoading = false;
-      state.error = action.error.message;
-    });
-
-    // Reducer pentru succesul operației addContact
-    builder.addCase(addContact.fulfilled, (state, action) => {
-      state.items.push(action.payload);
-      state.isLoading = false;
-      state.error = null;
-    });
-
-    // Reducer pentru începutul operației addContact
-    builder.addCase(addContact.pending, state => {
-      state.isLoading = true;
-      state.error = null;
-    });
-
-    // Reducer pentru eroare în operația addContact
-    builder.addCase(addContact.rejected, (state, action) => {
-      state.isLoading = false;
-      state.error = action.error.message;
-    });
-
-    // Reducer pentru succesul operației deleteContact
-    builder.addCase(deleteContact.fulfilled, (state, action) => {
-      state.items = state.items.filter(
-        contact => contact.id !== action.payload
-      );
-      state.isLoading = false;
-      state.error = null;
-    });
-
-    // Reducer pentru începutul operației deleteContact
-    builder.addCase(deleteContact.pending, state => {
-      state.isLoading = true;
-      state.error = null;
-    });
-
-    // Reducer pentru eroare în operația deleteContact
-    builder.addCase(deleteContact.rejected, (state, action) => {
-      state.isLoading = false;
-      state.error = action.error.message;
-    });
+      builder.addCase(deleteContact.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      });
+      builder.addCase(deleteContact.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.items = state.items.filter(
+          contact => contact.id !== action.payload
+        );
+      });
+      builder.addCase(deleteContact.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
+    },
   },
 });
 
 export const { setContacts, setFilter, setLoading, setError } =
   contactsSlice.actions;
+
 export default contactsSlice.reducer;
