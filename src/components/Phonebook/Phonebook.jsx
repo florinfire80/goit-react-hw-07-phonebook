@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  addContact,
-  deleteContact,
-  setFilter,
-  fetchAllContacts,
-} from '../../redux/contactsSlice';
+  fetchContactsAsync,
+  addContactAsync,
+  deleteContactAsync,
+} from '../../service/api';
+import { setContacts, setFilter } from '../../redux/contactsSlice';
 import { nanoid } from 'nanoid';
 import ContactForm from './ContactForm';
 import ContactList from './ContactList';
@@ -14,15 +14,13 @@ import './Phonebook.module.css';
 const Phonebook = () => {
   const contacts = useSelector(state => state.contacts.items);
   const filter = useSelector(state => state.contacts.filter);
-  const isLoading = useSelector(state => state.contacts.isLoading);
-  const error = useSelector(state => state.contacts.error);
   const dispatch = useDispatch();
 
   const [name, setName] = React.useState('');
-  const [phone, setPhone] = React.useState('');
+  const [number, setNumber] = React.useState('');
 
   useEffect(() => {
-    dispatch(fetchAllContacts());
+    dispatch(fetchContactsAsync());
   }, [dispatch]);
 
   const handleChange = e => {
@@ -32,51 +30,35 @@ const Phonebook = () => {
         dispatch(setFilter(''));
         setName(value);
         break;
-      case 'phone':
-        setPhone(value);
+      case 'number':
+        setNumber(value);
         break;
       default:
         break;
     }
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
-
-    const nameExists = contacts.some(
-      contact => contact.name.toLowerCase() === name.toLowerCase()
-    );
-    const phoneExists = contacts.some(contact => contact.phone === phone);
-
-    if (nameExists) {
-      alert(
-        'The contact with this name already exists in the phonebook. Please choose a different name.'
-      );
-      return;
-    }
-
-    if (phoneExists) {
-      alert(
-        'This phone number already exists in the phone book. Please choose a different phone number.'
-      );
-      return;
-    }
-
-    if (name.trim() === '' || phone.trim() === '') {
-      alert('Please fill in all fields to add a contact.');
-      return;
-    }
 
     const newContact = {
       id: nanoid(),
       name,
-      phone,
+      phone: number,
     };
 
-    dispatch(addContact(newContact));
-    setName('');
-    setPhone('');
-    dispatch(setFilter(''));
+    try {
+      const resolvedContactData = await addContactAsync(newContact);
+
+      dispatch(setContacts([...contacts, resolvedContactData]));
+
+      setName('');
+      setNumber('');
+      dispatch(setFilter(''));
+    } catch (error) {
+      console.error('Error adding contact:', error.message);
+      alert('Error adding contact. Please try again.');
+    }
   };
 
   const handleFilterChange = e => {
@@ -89,18 +71,25 @@ const Phonebook = () => {
       contact.phone.includes(filter)
   );
 
-  const handleDelete = id => {
-    dispatch(deleteContact(id));
+  const handleDelete = async id => {
+    try {
+      await dispatch(deleteContactAsync(id));
+
+      dispatch(
+        setContacts(filteredContacts.filter(contact => contact.id !== id))
+      );
+    } catch (error) {
+      console.error('Error deleting contact:', error.message);
+      alert('Error deleting contact. Please try again.');
+    }
   };
 
   return (
     <div>
       <h1>Phonebook</h1>
-      {isLoading && <p>Loading...</p>}
-      {error && <p>Error: {error}</p>}
       <ContactForm
         name={name}
-        phone={phone}
+        number={number}
         handleChange={handleChange}
         handleSubmit={handleSubmit}
       />

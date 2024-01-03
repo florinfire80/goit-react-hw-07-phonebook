@@ -1,51 +1,48 @@
+import { createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
+
 const BASE_URL = 'https://658467c94d1ee97c6bcfadd0.mockapi.io/contacts';
 
-export const fetchContacts = async () => {
+const fetchContactsAsync = createAsyncThunk('contacts/fetchAll', async () => {
   try {
-    const response = await fetch(`${BASE_URL}`);
-    if (!response.ok) {
-      throw new Error(`Error: ${response.status}`);
-    }
-    const data = await response.json();
-    return data;
+    const response = await axios.get(`${BASE_URL}`);
+    return response.data;
   } catch (error) {
-    console.error('Error fetching contacts:', error.message);
-    throw error;
+    throw new Error(`Error fetching contacts: ${error.message}`);
   }
-};
+});
 
-export const addContact = async contact => {
-  try {
-    const response = await fetch(`${BASE_URL}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(contact),
-    });
-    if (!response.ok) {
-      throw new Error(`Error: ${response.status}`);
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error adding contact:', error.message);
-    throw error;
-  }
-};
+const addContactAsync = createAsyncThunk(
+  'contacts/addContact',
+  async newContact => {
+    try {
+      const response = await axios.post(`${(BASE_URL, newContact)}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-export const deleteContact = async contactId => {
-  try {
-    const response = await fetch(`${BASE_URL}/${contactId}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) {
-      throw new Error(`Error: ${response.status}`);
+      if (response.status !== 201) {
+        throw new Error(`Error adding contact: ${response.status}`);
+      }
+
+      return response.data;
+    } catch (error) {
+      throw new Error(`Error adding contact: ${error.message}`);
     }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error deleting contact:', error.message);
-    throw error;
   }
-};
+);
+
+const deleteContactAsync = createAsyncThunk(
+  'contacts/deleteContact',
+  async contactId => {
+    try {
+      await axios.delete(`${BASE_URL}/${contactId}`);
+      return contactId;
+    } catch (error) {
+      throw new Error(`Error deleting contact: ${error.message}`);
+    }
+  }
+);
+
+export { fetchContactsAsync, addContactAsync, deleteContactAsync };
