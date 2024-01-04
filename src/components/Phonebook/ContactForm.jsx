@@ -9,7 +9,7 @@ const ContactForm = ({ name, phone, handleChange, handleSubmit }) => {
       </label>
       <label>
         Phone number:
-        <input type="tel" name="phone" value={phone} onChange={handleChange} />
+        <input type="tel" name="number" value={phone} onChange={handleChange} />
       </label>
       <button type="submit">Add contact</button>
     </form>

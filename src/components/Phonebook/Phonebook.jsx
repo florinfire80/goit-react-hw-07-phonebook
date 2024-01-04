@@ -1,26 +1,27 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  fetchContactsAsync,
-  addContactAsync,
-  deleteContactAsync,
-} from '../../service/api';
+  fetchContacts,
+  addContact,
+  deleteContact,
+} from '../../redux/contactsSlice';
 import { setContacts, setFilter } from '../../redux/contactsSlice';
 import { nanoid } from 'nanoid';
 import ContactForm from './ContactForm';
 import ContactList from './ContactList';
+import { selectContacts, selectFilter } from '../../redux/contactsSelectors';
 import './Phonebook.module.css';
 
 const Phonebook = () => {
-  const contacts = useSelector(state => state.contacts.items);
-  const filter = useSelector(state => state.contacts.filter);
+  const contacts = useSelector(selectContacts);
+  const filter = useSelector(selectFilter);
   const dispatch = useDispatch();
 
   const [name, setName] = React.useState('');
   const [number, setNumber] = React.useState('');
 
   useEffect(() => {
-    dispatch(fetchContactsAsync());
+    dispatch(fetchContacts());
   }, [dispatch]);
 
   const handleChange = e => {
@@ -34,12 +35,29 @@ const Phonebook = () => {
         setNumber(value);
         break;
       default:
+        console.error('Unhandled input name:', name);
         break;
     }
   };
 
   const handleSubmit = async e => {
     e.preventDefault();
+
+    if (name.trim() === '' || number.trim() === '') {
+      alert('Please fill in both name and phone number.');
+      return;
+    }
+
+    const isDuplicate = contacts.some(
+      contact =>
+        contact.name.toLowerCase() === name.toLowerCase() ||
+        contact.phone === number
+    );
+
+    if (isDuplicate) {
+      alert('This name or phone number already exists in your contact list.');
+      return;
+    }
 
     const newContact = {
       id: nanoid(),
@@ -48,13 +66,11 @@ const Phonebook = () => {
     };
 
     try {
-      const resolvedContactData = await addContactAsync(newContact);
-
-      dispatch(setContacts([...contacts, resolvedContactData]));
+      dispatch(addContact(newContact));
 
       setName('');
       setNumber('');
-      dispatch(setFilter(''));
+      setFilter('');
     } catch (error) {
       console.error('Error adding contact:', error.message);
       alert('Error adding contact. Please try again.');
@@ -73,7 +89,7 @@ const Phonebook = () => {
 
   const handleDelete = async id => {
     try {
-      await dispatch(deleteContactAsync(id));
+      dispatch(deleteContact(id));
 
       dispatch(
         setContacts(filteredContacts.filter(contact => contact.id !== id))
