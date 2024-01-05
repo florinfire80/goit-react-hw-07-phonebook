@@ -18,7 +18,7 @@ const Phonebook = () => {
   const dispatch = useDispatch();
 
   const [name, setName] = React.useState('');
-  const [number, setNumber] = React.useState('');
+  const [phone, setPhone] = React.useState('');
 
   useEffect(() => {
     dispatch(fetchContacts());
@@ -31,8 +31,8 @@ const Phonebook = () => {
         dispatch(setFilter(''));
         setName(value);
         break;
-      case 'number':
-        setNumber(value);
+      case 'phone':
+        setPhone(value);
         break;
       default:
         console.error('Unhandled input name:', name);
@@ -43,7 +43,7 @@ const Phonebook = () => {
   const handleSubmit = async e => {
     e.preventDefault();
 
-    if (name.trim() === '' || number.trim() === '') {
+    if (name.trim() === '' || phone.trim() === '') {
       alert('Please fill in both name and phone number.');
       return;
     }
@@ -51,7 +51,7 @@ const Phonebook = () => {
     const isDuplicate = contacts.some(
       contact =>
         contact.name.toLowerCase() === name.toLowerCase() ||
-        contact.phone === number
+        contact.phone === phone
     );
 
     if (isDuplicate) {
@@ -62,14 +62,14 @@ const Phonebook = () => {
     const newContact = {
       id: nanoid(),
       name,
-      phone: number,
+      phone,
     };
 
     try {
       dispatch(addContact(newContact));
 
       setName('');
-      setNumber('');
+      setPhone('');
       setFilter('');
     } catch (error) {
       console.error('Error adding contact:', error.message);
@@ -105,7 +105,7 @@ const Phonebook = () => {
       <h1>Phonebook</h1>
       <ContactForm
         name={name}
-        number={number}
+        phone={phone}
         handleChange={handleChange}
         handleSubmit={handleSubmit}
       />
